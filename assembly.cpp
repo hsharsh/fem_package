@@ -1,34 +1,26 @@
-#include <bits/stdc++.h>
+#include "structure.h"
 
 using namespace std;
 
-#define DEBUG(x) 	cout << '>' << #x << ':' << x << endl
-#define REP(i,n) 	for(ll i=0;i<(n);++i)
-#define FOR(i,a,b) 	for(ll i=(a);i<(b);++i)
-#define DFOR(i,a,b) for(ll i=(a);i>=(b);--i)
-#define v 			vector<vector<double> >
-#define ll 			long long
-
-
 int main(){
-	ll nelm, nnod;
+	ll nelm, nnod, ndof;
 	cout << "Enter the number of elements: ";
 	cin >> nelm;
-	nnod = nelm + 1;
-	double conn[nelm][2];
+	
+	cout << "Enter the number of nodes per element: ";
+	cin >> nnod;
 
-	REP(i,nelm){
-		conn[i][0] = i+1;
-		conn[i][1] = i+2;
-	}
+	cout << "Enter the dof per node: ";
+	cin >> ndof;	
+
+	
+	vector<Element> mesh(nelm, Element(ndof,nnod));
+
 /*	
 	REP(i, nelm){
 		cout << conn[i][0] << " " << conn[i][1] << endl;
 	}
 */
-	ll ndof;
-	cout << "Enter the degrees of freedom: ";
-	cin >> ndof;
 /*	
 	ll kg = zeros(ndof*nnod);          % Declaration of the global stiffness matrix.
 kl = rand(ndof*2);              % Declaration of a random local stiffness matrix.
