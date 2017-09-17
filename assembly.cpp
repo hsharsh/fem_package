@@ -13,16 +13,28 @@ int main(int argc, char** argv){
 		if(line.substr(0,5) == "*Node"){
 			while(getline(input, line) && (line.substr(0,1).compare("*"))){
 				stringstream ss(line);
-				ll k;
+				string s;
 				vd temp;
 				REP(j, 4){
-					ss >> k;
+					ss >> s;
+
+					int decimal = s.size()-1;
+					REP(k, s.size()){
+						if(s[k] == '.')
+							decimal = k;
+					}
+
+					double num = 0;
+					num = stoll(s.substr(0,decimal));
+					if(decimal != (s.size()-1)){
+						num += stoll("0" + s.substr(decimal+1,s.size()-decimal-2)) * pow(10, -1 * (int)(s.size()-decimal-2)) ;
+					}
 					if(j != 0)
-						temp.push_back(k);
+						temp.push_back(num);
 					ss.ignore();
 				}
-				x.push_back(temp);
 				tnod++;
+				x.push_back(temp);
 			}
 		}
 
@@ -57,16 +69,16 @@ int main(int argc, char** argv){
 		nodes[i].build_x(x[i]);
 	}
 
-/*
+
 	cout << endl;
 	cout << "Nodes: " << endl;
 	REP(i, tnod){
-		REP(j, nnod){
+		REP(j, 3){
 			cout << x[i][j] << " ";
 		}
 		cout << endl;
 	}
-*/
+
 
 	cout << endl;
 	cout << "Connectivity matrix: " << endl;
