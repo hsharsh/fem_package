@@ -3,6 +3,7 @@
 using namespace std;
 
 int main(int argc, char** argv){
+	freopen("serialoutput.o","w",stdout);
 	ll nelm = 0, tnod = 0, ndof = 0, nnod = 0;
 
 	ifstream input(argv[1]);
@@ -69,20 +70,19 @@ int main(int argc, char** argv){
 		nodes[i].build_x(x[i]);
 	}
 
-
-	cout << endl;
 	cout << "Nodes: " << endl;
 	REP(i, tnod){
+		cout << "Node " << i+1 << ": ";
 		REP(j, 3){
 			cout << x[i][j] << " ";
 		}
 		cout << endl;
 	}
 
-
 	cout << endl;
 	cout << "Connectivity matrix: " << endl;
 	REP(i,nelm){
+		cout << "Element " << i+1 << ": ";
 		REP(j,nnod)
 			cout << connectivity[i][j]<< " ";
 		cout << endl;
@@ -120,7 +120,7 @@ int main(int argc, char** argv){
 	}	
 
 	cout << endl;
-	cout << "K global:" << endl;
+	cout << "K global:" << endl << endl;
 	REP(i,tnod*ndof){
 		REP(j,tnod*ndof){
 			cout << m_assembly.k_global[i][j] << " ";

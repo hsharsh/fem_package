@@ -2,3 +2,4 @@
 *~
 *.out
 test.cpp
+test.cu

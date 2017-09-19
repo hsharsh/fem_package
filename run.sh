@@ -1,4 +1,4 @@
-if g++ -std=c++14 assembly.cpp structure.cpp; then
+if nvcc assembly.cu structure.cpp; then
         echo "Assembly successful."
         ./a.out $1
 else
