@@ -1,52 +1,14 @@
 #include "structure.h"
 
-//	Global Class : Assembly
+using namespace std;
 
-Assembly::Assembly(ll nelm, ll tnod, int ndof){
-	this->nelm 			= nelm;
-	this->tnod			= tnod;	
-	this->connectivity 	= vdd(nelm,vd());
-	this->k_global		= vdd(tnod*ndof,vd(tnod*ndof,0));
-}
-
-void Assembly::build_connectivity(vdd connectivity){
-	this->connectivity = connectivity;
-}
+#define ll long long
+#define x(node,a,b)  (node[a-1][0]-node[b-1][0])
+#define y(node,a,b)  (node[a-1][1]-node[b-1][1])
+#define z(node,a,b)  (node[a-1][2]-node[b-1][2])
 
 
-//Class : Node
-
-Node::Node(int ndof){
-	this->z 			= vd(3);
-	this->x 			= x;
-	this->gradz 		= vdd(3,vd(3));
-}	
-
-void Node::build_x(vd x){
-	this->x = x;
-}
-
-//Class : Element
-
-Element::Element(int ndof, int nnod){
-	this->ndof 			= ndof;
-	this->nnod 			= nnod;
-	this->stress 		= vdd(3,vd(3));
-	this->strain 		= vdd(3,vd(3));
-	this->nodes			= vi(nnod);
-}
-
-vdd Element::build_kl(){
-	vdd kl(this->nnod* this->ndof,vd(this->nnod*this->ndof,1));
-	return kl;
-}
-
-//Class : Tetra
-Tetra::Tetra():Element(3,4){
-
-}
-
-vdd build_k(vdd node){
+void build_kl(vdd node){
     vd a(5), b(5), c(5);
 
     double Jdet=x(node,2,1)*(y(node,2,3)*z(node,3,4)-y(node,3,4)*z(node,2,3))+x(node,3,2)*(y(node,3,4)*z(node,1,2)-y(node,1,2)*z(node,3,4))+x(node,4,3)*(y(node,1,2)*z(node,2,3)-y(node,2,3)*z(node,1,2));
@@ -86,8 +48,7 @@ vdd build_k(vdd node){
         {0, 0, 0, 0, 0, d*(0.5-v)},
     };
 
-    vdd K(12,vd(12,0));
-    double kl[12][6] = {0};
+    double K[12][12] = {0}, kl[12][6] = {0};
 
     REP(i,12){
         REP(j,6){
@@ -103,7 +64,7 @@ vdd build_k(vdd node){
             }
         }
     }
-/*
+
     REP(i,12){
         REP(j,12){
             K[i][j] *= V;
@@ -111,6 +72,15 @@ vdd build_k(vdd node){
         }
         cout << endl;
     }
-*/
-    return K;
+}
+
+int main(){
+    vdd node(4,vd(3,0));
+    REP(i, 4){
+        REP(j, 3){
+            cin >> node[i][j];
+        }
+    }
+    build_kl(node);
+
 }

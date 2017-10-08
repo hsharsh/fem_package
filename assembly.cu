@@ -21,9 +21,7 @@ __global__ void MatAdd(double kg[], double kl[], int dof[], int sizekl, int size
            int i = blockIdx.x;
            int j = threadIdx.x;
            int k = threadIdx.y;
-           //printf("Element %d: %d %d Dofi:%d Dofj:%d Kl:%d Kg:%d\n", i, j, k, dof[i][j], dof[i][k], kl[j][k], kg[dof[i][j]][dof[i][k]]);
-           //kg[dof[i][j]][dof[i][k]] = kg[dof[i][j]][dof[i][k]] + kl[j][k];
-           datomicAdd( &(kg[dof[i*sizekl + j]*sizekg + dof[i*sizekl + k]]), kl[j*sizekl +k]);
+           datomicAdd( &(kg[dof[i*sizekl + j]*sizekg + dof[i*sizekl + k]]), kl[i*sizekl*sizekl + j*sizekl +k]);
 			__syncthreads();
        }
 
@@ -60,10 +58,17 @@ int main(int argc, char** argv){
 					}
 
 					double num = 0;
-					num = stoll(s.substr(0,decimal));
+					
+					bool negative = false;
+					if(s.substr(0,1) == "-")
+						negative = true;
+					num = stoll(s.substr((negative ? 1 : 0),decimal - (negative ? 1 : 0)));
 					if(decimal != (s.size()-1)){
 						num += stoll("0" + s.substr(decimal+1,s.size()-decimal-2)) * pow(10, -1 * (int)(s.size()-decimal-2)) ;
 					}
+					if(negative)
+						num *= -1;
+					
 					if(j != 0)
 						temp.push_back(num);
 					ss.ignore();
@@ -76,7 +81,7 @@ int main(int argc, char** argv){
 
 		if(line.substr(0,8) == "*Element"){
 			type = line.substr(15,line.size()-15);
-			if(type == "C3D4"){
+ 			if(type.size() >= 4 && type.substr(0,4) == "C3D4"){
 				ndof = 3;
 				nnod = 4;
 			}
@@ -99,7 +104,7 @@ int main(int argc, char** argv){
 
 	Assembly 		m_assembly(nelm, tnod, ndof);
 	vector<Node> 	nodes(tnod,Node(ndof));
-	if(type == "C3D4")
+	if(type.size() >= 4 && type.substr(0,4) == "C3D4")
 		vector<Element> mesh(nelm,Tetra());
 
 	REP(i, tnod){
@@ -116,11 +121,40 @@ int main(int argc, char** argv){
 		cout << endl;
 	}
 
+	double kl[nelm*nnod*ndof*nnod*ndof];
+
+	REP(k, nelm){
+		REP(i, nnod*ndof){
+			REP(j, nnod*ndof){
+				kl[k*nnod*ndof*nnod*ndof + i*nnod*ndof + j] = 0.0;
+				//cout << kl[i*nnod*ndof + j] << " ";
+			}
+			//cout << endl;
+		}
+	}
 
 	cout << endl;
 	cout << "Connectivity matrix: " << endl << endl;
 	REP(i,nelm){
 		cout << "Element " << i+1 << ": ";
+		vdd node(4,vd(3));
+	    REP(j, nnod){
+	        REP(k, 3){
+	        	//cout << connectivity[i][j] << "->" << x[connectivity[i][j]-1][k] << " ";
+	            node[j][k] = x[connectivity[i][j]-1][k];
+	        }
+	       // cout << endl;
+	    }		
+		vdd k_local = build_k(node);
+		
+		REP(j, nnod*ndof){
+			REP(k, nnod*ndof){
+				kl[i*nnod*ndof*nnod*ndof + j*nnod*ndof + k] = k_local[j][k];
+				//cout << kl[i*nnod*ndof + j] << " ";
+			}
+			//cout << endl;
+		}
+
 		REP(j,nnod)
 			cout << connectivity[i][j]<< " ";
 		cout << endl;
@@ -141,8 +175,10 @@ int main(int argc, char** argv){
 		REP(j, m_assembly.connectivity[i].size()){
 			REP(k, ndof){
 				dof[i*nnod*ndof + j*ndof + k] = (ndof * m_assembly.connectivity[i][j]) - (ndof - k);
+				//cout << dof[i*nnod*ndof + j*ndof + k] << " ";
 			}
 		}
+		//cout << endl;
 	}
 
 	double kg[tnod*ndof*tnod*ndof];
@@ -153,13 +189,7 @@ int main(int argc, char** argv){
 		}
 	}
 
-	double kl[nnod*ndof*nnod*ndof];
 
-	REP(i, nnod*ndof){
-		REP(j, nnod*ndof){
-			kl[i*nnod*ndof + j] = 1.0;
-		}
-	}	
 /*
 	cout << endl << "Dof matrix:" << endl;
 	REP(i, nelm){
@@ -175,10 +205,10 @@ int main(int argc, char** argv){
 
 	cudaMalloc((void**)&pdof, (nelm*nnod*ndof)*sizeof(int));
 	cudaMalloc((void**)&pkg, (tnod*ndof*tnod*ndof)*sizeof(double));
-	cudaMalloc((void**)&pkl, (nnod*ndof*nnod*ndof)*sizeof(double));
+	cudaMalloc((void**)&pkl, (nelm*nnod*ndof*nnod*ndof)*sizeof(double));
 
 	cudaMemcpy(pdof, dof, (nelm*nnod*ndof)*sizeof(int), cudaMemcpyHostToDevice);
-	cudaMemcpy(pkl, kl, (nnod*ndof*nnod*ndof)*sizeof(double), cudaMemcpyHostToDevice);
+	cudaMemcpy(pkl, kl, (nelm*nnod*ndof*nnod*ndof)*sizeof(double), cudaMemcpyHostToDevice);
 	cudaMemcpy(pkg, kg, (tnod*ndof*tnod*ndof)*sizeof(double), cudaMemcpyHostToDevice);
 
 	int numBlocks = nelm;
@@ -198,6 +228,6 @@ int main(int argc, char** argv){
 		REP(j,tnod*ndof){
 			cout << kg[i*tnod*ndof + j] << " ";
 		}
-		cout << endl;
+		cout << ";" << endl;
 	}
 }

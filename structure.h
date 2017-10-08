@@ -12,7 +12,12 @@
 	#define FOR(i,a,b) 	for(ll i=(a);i<(b);++i)
 	#define DFOR(i,a,b) for(ll i=(a);i>=(b);--i)
 	#define DEBUG(x) 	cout << '>' << #x << ':' << x << endl
+	#define x(node,a,b)  (node[a-1][0]-node[b-1][0])
+	#define y(node,a,b)  (node[a-1][1]-node[b-1][1])
+	#define z(node,a,b)  (node[a-1][2]-node[b-1][2])
 	
+	vdd build_k(vdd node);
+
 	class Assembly{
 		private:
 			ll nelm;

@@ -2,6 +2,10 @@
 
 using namespace std;
 
+#define x(node,a,b)  (node[a-1][0]-node[b-1][0])
+#define y(node,a,b)  (node[a-1][1]-node[b-1][1])
+#define z(node,a,b)  (node[a-1][2]-node[b-1][2])
+
 int main(int argc, char** argv){
 	freopen("serialoutput.o","w",stdout);
 	ll nelm = 0, tnod = 0, ndof = 0, nnod = 0;
@@ -38,6 +42,7 @@ int main(int argc, char** argv){
 				x.push_back(temp);
 			}
 		}
+
 
 		if(line.substr(0,8) == "*Element"){
 			string type = line.substr(15,line.size()-15);
