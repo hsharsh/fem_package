@@ -1,37 +1,8 @@
 #include "structure.h"
+#include "assembly.h"
+#include "device.cuh"
 #include <bits/stdc++.h>
 using namespace std;
-
-
-__device__ double datomicAdd(double* address, double val)
-{
-    unsigned long long int* address_as_ull =
-                             (unsigned long long int*)address;
-    unsigned long long int old = *address_as_ull, assumed;
-    do {
-        assumed = old;
-old = atomicCAS(address_as_ull, assumed,
-                        __double_as_longlong(val +
-                               __longlong_as_double(assumed)));
-    } while (assumed != old);
-    return __longlong_as_double(old);
-}
-
-__global__ void MatAdd(double kg[], double kl[], int dof[], int sizekl, int sizekg){
-           int i = blockIdx.x;
-           int j = threadIdx.x;
-           int k = threadIdx.y;
-           datomicAdd( &(kg[dof[i*sizekl + j]*sizekg + dof[i*sizekl + k]]), kl[i*sizekl*sizekl + j*sizekl +k]);
-			__syncthreads();
-       }
-
-ll stoll(string s){
-	ll number = 0;
-	DFOR(i,s.size()-1,0){
-		number = number + (s[i]-'0') * pow(10,s.size()-i-1);
-	}
-	return number;
-}
 
 int main(int argc, char** argv){
 	freopen("paralleloutput.o","w",stdout);
@@ -80,24 +51,33 @@ int main(int argc, char** argv){
 		}
 
 		if(line.substr(0,8) == "*Element"){
+
 			type = line.substr(15,line.size()-15);
  			if(type.size() >= 4 && type.substr(0,4) == "C3D4"){
 				ndof = 3;
 				nnod = 4;
 			}
+			if(type.size() >= 5 && type.substr(0,5) == "C3D10"){
+				ndof = 3;
+				nnod = 10;
+			}
+			cout << nnod << endl;
 			while(getline(input, line) && (line.substr(0,1).compare("*"))){
+				cout << line << endl;
 				stringstream ss(line);
 				ll k;
 				vd temp;
+
 				REP(j, nnod + 1){
 					ss >> k;
 					if(j != 0)
 						temp.push_back(k);
 					ss.ignore();
 				}
-				nelm++;				
+				nelm++;
 				connectivity.push_back(temp);
 			}
+
 		}
 	}
 
@@ -105,7 +85,9 @@ int main(int argc, char** argv){
 	Assembly 		m_assembly(nelm, tnod, ndof);
 	vector<Node> 	nodes(tnod,Node(ndof));
 	if(type.size() >= 4 && type.substr(0,4) == "C3D4")
-		vector<Element> mesh(nelm,Tetra());
+		vector<Element> mesh(nelm,Tetra_linear());
+	if(type.size() >= 5 && type.substr(0,5) == "C3D10")
+		vector<Element> mesh(nelm,Tetra_quadratic());
 
 	REP(i, tnod){
 		nodes[i].build_x(x[i]);
@@ -137,15 +119,19 @@ int main(int argc, char** argv){
 	cout << "Connectivity matrix: " << endl << endl;
 	REP(i,nelm){
 		cout << "Element " << i+1 << ": ";
-		vdd node(4,vd(3));
+		vdd node(nnod,vd(3));
 	    REP(j, nnod){
 	        REP(k, 3){
 	        	//cout << connectivity[i][j] << "->" << x[connectivity[i][j]-1][k] << " ";
 	            node[j][k] = x[connectivity[i][j]-1][k];
 	        }
 	       // cout << endl;
-	    }		
-		vdd k_local = build_k(node);
+	    }
+	    vdd k_local;
+	    if(type.size() >= 4 && type.substr(0,4) == "C3D4")
+			k_local = build_k(node);
+		if(type.size() >= 5 && type.substr(0,5) == "C3D10")
+			k_local = vdd(30,vd(30,0));
 		
 		REP(j, nnod*ndof){
 			REP(k, nnod*ndof){

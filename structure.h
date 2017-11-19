@@ -16,8 +16,6 @@
 	#define y(node,a,b)  (node[a-1][1]-node[b-1][1])
 	#define z(node,a,b)  (node[a-1][2]-node[b-1][2])
 	
-	vdd build_k(vdd node);
-
 	class Assembly{
 		private:
 			ll nelm;
@@ -52,14 +50,8 @@
 		public:
 			int nnod;
 			Element(int ndof, int nnod);
-			vdd build_kl();
 	};
 
-	class Tetra: public Element{
-		private:
-
-		public:
-			Tetra();
-	};
+	ll stoll(string s);
 
 #endif

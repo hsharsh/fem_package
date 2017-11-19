@@ -1,140 +1,80 @@
-#include "structure.h"
+#include "assembly.h"
 
-using namespace std;
+//Class : Tetra Linear
+Tetra_linear::Tetra_linear():Element(3,4){
 
-#define x(node,a,b)  (node[a-1][0]-node[b-1][0])
-#define y(node,a,b)  (node[a-1][1]-node[b-1][1])
-#define z(node,a,b)  (node[a-1][2]-node[b-1][2])
+}
 
-int main(int argc, char** argv){
-	freopen("serialoutput.o","w",stdout);
-	ll nelm = 0, tnod = 0, ndof = 0, nnod = 0;
+//Class : Tetra Quadratic
+Tetra_quadratic::Tetra_quadratic():Element(3,10){
 
-	ifstream input(argv[1]);
-	vdd connectivity;
-	vdd x;
+}
 
-	for(string line; getline(input,line);){
-		if(line.substr(0,5) == "*Node"){
-			while(getline(input, line) && (line.substr(0,1).compare("*"))){
-				stringstream ss(line);
-				string s;
-				vd temp;
-				REP(j, 4){
-					ss >> s;
+vdd build_k(vdd node){
+    vd a(5), b(5), c(5);
 
-					int decimal = s.size()-1;
-					REP(k, s.size()){
-						if(s[k] == '.')
-							decimal = k;
-					}
+    double Jdet=x(node,2,1)*(y(node,2,3)*z(node,3,4)-y(node,3,4)*z(node,2,3))+x(node,3,2)*(y(node,3,4)*z(node,1,2)-y(node,1,2)*z(node,3,4))+x(node,4,3)*(y(node,1,2)*z(node,2,3)-y(node,2,3)*z(node,1,2));
 
-					double num = 0;
-					num = stoll(s.substr(0,decimal));
-					if(decimal != (s.size()-1)){
-						num += stoll("0" + s.substr(decimal+1,s.size()-decimal-2)) * pow(10, -1 * (int)(s.size()-decimal-2)) ;
-					}
-					if(j != 0)
-						temp.push_back(num);
-					ss.ignore();
-				}
-				tnod++;
-				x.push_back(temp);
-			}
-		}
+    a[1]=y(node,4,2)*z(node,3,2)-y(node,3,2)*z(node,4,2); 
+    b[1]=x(node,3,2)*z(node,4,2)-x(node,4,2)*z(node,3,2); 
+    c[1]=x(node,4,2)*y(node,3,2)-x(node,3,2)*y(node,4,2);
+    a[2]=y(node,3,1)*z(node,4,3)-y(node,3,4)*z(node,1,3);
+    b[2]=x(node,4,3)*z(node,3,1)-x(node,1,3)*z(node,3,4); 
+    c[2]=x(node,3,1)*y(node,4,3)-x(node,3,4)*y(node,1,3);
+    a[3]=y(node,2,4)*z(node,1,4)-y(node,1,4)*z(node,2,4);
+    b[3]=x(node,1,4)*z(node,2,4)-x(node,2,4)*z(node,1,4);
+    c[3]=x(node,2,4)*y(node,1,4)-x(node,1,4)*y(node,2,4);
+    a[4]=y(node,1,3)*z(node,2,1)-y(node,1,2)*z(node,3,1);
+    b[4]=x(node,2,1)*z(node,1,3)-x(node,3,1)*z(node,1,2);
+    c[4]=x(node,1,3)*y(node,2,1)-x(node,1,2)*y(node,3,1);
 
+    double B[6][4*3] = {
+            {a[1],  0, 0, a[2], 0, 0, a[3], 0, 0, a[4], 0, 0},
+            {0, b[1], 0, 0, b[2], 0, 0, b[3], 0, 0, b[4], 0},
+            {0, 0, c[1], 0, 0, c[2], 0, 0, c[3], 0, 0, c[4]},
+            {b[1], a[1], 0, b[2], a[2], 0, b[3], a[3], 0, b[4], a[4], 0},
+            {0, c[1], b[1], 0, c[2], b[2], 0, c[3], b[3], 0, c[4], b[4]},
+            {c[1], 0, a[1], c[2], 0, a[2], c[3], 0, a[3], c[4], 0, a[4]},
+        };
+    double V = Jdet;
+    double v = 0;
+    double E = 1;
 
-		if(line.substr(0,8) == "*Element"){
-			string type = line.substr(15,line.size()-15);
-			if(type == "C3D4"){
-				ndof = 3;
-				nnod = 4;
-			}
-			while(getline(input, line) && (line.substr(0,1).compare("*"))){
-				stringstream ss(line);
-				ll k;
-				vd temp;
-				REP(j, nnod + 1){
-					ss >> k;
-					if(j != 0)
-						temp.push_back(k);
-					ss.ignore();
-				}
-				connectivity.push_back(temp);
-				nelm++;
-			}
-		}
-	}
+    double d = (E/(1+v)*(1-2*v));
+    double C[6][6] = {
+        {d*(1-v) , d*v, d*v, 0, 0, 0},
+        {d*v, d*(1-v), d*v, 0, 0, 0},
+        {d*v, d*v, d*(1-v), 0, 0, 0},
+        {0, 0, 0, d*(0.5-v), 0, 0},
+        {0, 0, 0, 0, d*(0.5-v), 0},
+        {0, 0, 0, 0, 0, d*(0.5-v)},
+    };
 
+    vdd K(12,vd(12,0));
+    double kl[12][6] = {0};
 
-	Assembly m_assembly(nelm, tnod, ndof);
-	vector<Node> 	nodes(tnod,Node(ndof));
-	vector<Element> mesh(nelm,Element(ndof,4));
-
-	REP(i, tnod){
-		nodes[i].build_x(x[i]);
-	}
-
-	cout << "Nodes: " << endl;
-	REP(i, tnod){
-		cout << "Node " << i+1 << ": ";
-		REP(j, 3){
-			cout << x[i][j] << " ";
-		}
-		cout << endl;
-	}
-
-	cout << endl;
-	cout << "Connectivity matrix: " << endl;
-	REP(i,nelm){
-		cout << "Element " << i+1 << ": ";
-		REP(j,nnod)
-			cout << connectivity[i][j]<< " ";
-		cout << endl;
-	}
-	m_assembly.build_connectivity(connectivity);
+    REP(i,12){
+        REP(j,6){
+            REP(k,6){
+                kl[i][j] += B[k][i] * C[k][j];
+            }
+        }
+    }
+    REP(i,12){
+        REP(j,12){
+            REP(k,6){
+                K[i][j] += kl[i][k] * B[k][j];
+            }
+        }
+    }
 /*
-	cout << "Connectivity matrix : " << endl;
-	REP(i, nelm){
-		for(auto j : m_assembly.connectivity[i]){
-			cout << j << " ";
-		}
-		cout << endl;
-	}
+    REP(i,12){
+        REP(j,12){
+            K[i][j] *= V;
+            cout << K[i][j] << " ";
+        }
+        cout << endl;
+    }
 */
-
-	REP(i, nelm){
-		vd dof(mesh[i].nnod*ndof);
-		REP(j, m_assembly.connectivity[i].size()){
-			REP(k, ndof){
-				dof[j*ndof + k] = (ndof * m_assembly.connectivity[i][j]) - (ndof - k);
-			}
-		}
-/*		
-		for(auto j : dof){
-			cout << j+1 << " ";
-		}
-		cout << endl;
-*/
-		vdd kl = mesh[i].build_kl();
-		REP(j, dof.size()){
-			REP(k, dof.size()){
-				m_assembly.k_global[dof[j]][dof[k]] += kl[j][k];
-			}
-		}
-	}	
-
-	cout << endl;
-	cout << "K global:" << endl << endl;
-	REP(i,tnod*ndof){
-		REP(j,tnod*ndof){
-			cout << m_assembly.k_global[i][j] << " ";
-/*			if(m_assembly.k_global[i][j])
-				cout << "x";
-			else
-				cout << "o";
-*/		}
-		cout << endl;
-	}
-
+    return K;
 }
